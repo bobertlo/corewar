@@ -1,0 +1,313 @@
+<HEAD>
+<TITLE>Intro to Art in '88: Scanner Warriors</TITLE>
+
+<H1>PREFACE</H1>
+
+This part of introduction describes what and how the scanner warriors work.
+The scope in this document covers only classical scanners. Classical
+scanners are scanners that are designed to specifically catch
+<A HREF="replicat.htm#start">paper</A> style warriors by throwing
+<A HREF="misc.htm#selfSplit">self-splitting</A> instructions. This includes 
+two scanner prototypes: B-scanner and CMP-scanner. They are detailed in two 
+separate parts. Comparison between scanners can be found afterward. 
+Further details on other types of scanners can be obtained from
+<A HREF="ftp://ftp.koth.org/pub/corewar/redcode">various
+collection of articles</A> in ftp.CSUA.berkeley.edu under
+directory pub/corewar/redcode.<P>
+
+<UL>
+Table lookup:
+<LI><A HREF="#scanProto">Scanner Prototypes</A>
+<UL>
+<LI><A HREF="#bscan">B-scanner</A>
+<UL>Components:
+<LI><A HREF="#bscan2">B-scan phase</A>
+<LI><A HREF="#bstun2">Stunning phase</A>
+<LI><A HREF="#bloop2">Looping solution</A>
+<LI><A HREF="#bend2">End phase</A>
+<LI><A HREF="#ball2">Overall</A>
+</ul>
+<LI><A HREF="#cmpscan">CMP-scanner</A>
+<UL>Components:
+<LI><A HREF="#cmpscan2">CMP-scan phase</A>
+<LI><A HREF="#cmpstun2">Stunning phase</A>
+<LI><A HREF="#cmploop2">Looping solution</A>
+<LI><A HREF="#cmpend2">End phase</A>
+<LI><A HREF="#cmpall2">Overall</A>
+</ul>
+</UL>
+<LI><A HREF="#comparison">Comparison between B-scanners and CMP-scanners</A>
+</UL>
+
+<HR>
+
+</HEAD>
+
+<BODY>
+
+<H1><A NAME="scanProto">Scanner prototypes</A></H1>
+
+Scanner warriors are those that are configured to detect the presence of
+opponent before laying down their bombs on any suspicious locations.
+Aside from scanning, it is also important that the scanners are able to
+avoid messing up their own code.<P>
+
+There are two distinct prototypes for scanners. They are
+<A HREF="#bscan">B-scanner</A> and <A HREF="#cmpscan">CMP-scanner</A>. Their
+names were derived from their functions that do scanning. B-scanners detect
+their opponent by searching for any non-zero B-field in their code. CMP-scanners
+provide more rigid detection by comparing (CMP) for any non-identical
+instructions between two different locations. In the extent of their functional 
+differences, both kinds of scanners avoid self-attack in interestingly
+different manner. (For further detail, see
+<A HREF="#comparison">Comparison</A> between B-scanners and CMP-scanners).
+
+<H2><A NAME="bscan">B-scanner</A></H2>
+
+B-scanners assumes that at least one of their opponent code has non-zero
+value in their B-field.<P>
+
+One of B-scanners' duties might be as follow:
+<listing>	; ... B-scan
+	; ... throw self-splitting instructions
+	; ... redo before finish
+	; ... core-clear</listing>
+
+<H3><A NAME="bscan2">B-scan</A></H3>
+
+Its main instruction is: <EM>JMZ scan, ptr</EM> where scan refers to 
+the scanning instructions and ptr refers to the current scanning location. 
+The scanning instructions update the scanning pointer and test if it points
+to a non-zero B-field. The instructions might be:
+<listing>	scan ADD #const, ptr
+	     JMZ scan, ptr</listing>
+
+During scanning phase, the scanner shouldn't be mistaken with any of its
+own codes. An easy way to do it is to add SLT after JMZ, e.g:
+<listing>	scan ADD #const, ptr
+	     JMZ scan, ptr
+	     SLT #num, ptr ; num is number of codes...
+	                   ; ...in-between ptr and last line</listing>
+
+<H3><A NAME="bstun2">Throw self-splitting instructions</A></H3>
+
+These are the two instructions:
+<listing>	MOV jmp_i, @ptr
+	MOV spl_i, &lt;ptr</listing>
+
+spl_i refers to <EM>SPL 0</EM> and jmp_i refers to <EM>JMP -1</EM>.<P>
+
+<H3><A NAME="bloop2">Redo before finish</A></H3>
+
+Against <A HREF="replicat.htm#start">replicator</A> warriors or other 
+warriors that execute more than one modules, it is neccessary to scan as 
+many locations as possible before core-clearing. A simple test to see whether 
+it has undergone a <A HREF="misc.htm#selfMutate">self-modification</A> or 
+not is sufficient. This test could be a single instruction:
+<listing>	JMN scan, scan</listing>
+
+<H3><A NAME="bend2">Core-clear</A></H3>
+
+This is to clear away all the opponent stunned processes and to convert 
+tie into winning:
+<listing>	SPL 0, 0
+	MOV dat_i, &lt;-1
+	JMP -1, 0</listing>
+
+<H3><A NAME="ball2">Overall</A></H3>
+
+Putting up together, here is the first version of B-scanner:
+This version uses <EM>SLT</EM> to avoid self-attack.
+<listing>	; name B-scanner 1
+	const	EQU 3094
+	init    EQU scan
+	scan	ADD #const, ptr
+	ptr     JMZ scan, ptr+init
+	        SLT #dat_i, ptr
+	throw   MOV jmp_i, @ptr
+	        MOV spl_i, &lt;ptr    ; pointer is decremented by 1
+	        ADD #1, ptr        ; needed to readjust the pointer
+	redo	JMN scan, scan
+	spl_i   SPL 0, 0
+	        MOV dat_i, &lt;-1
+	jmp_i   JMP -1, 0
+	dat_i   END scan</listing>
+
+Here is a much more elegant solution to B-scanner, blatantly taken from
+a successful classical B-scanner:
+<A HREF="bscanl.red">B-scanner live in vain</A>.
+<listing>	; name B-scanner 2
+	const   EQU 2234
+	init    EQU scan
+
+	scan    ADD #const, @2
+	        JMZ scan, @ptr  ; hit here
+	throw	MOV jmp_i, @ptr
+	ptr     MOV spl_i, &lt;init+ptr
+	redo    JMN scan, scan
+	spl_i   SPL 0, 0
+	        MOV dat_i, &lt;-1
+	jmp_i   JMP -1, 0
+	dat_i   END scan</listing>
+
+The <EM>SLT</EM> instruction has been dropped off but this program performs
+much better. Note that the warrior scans in <EM>modulo 2</EM> or one for
+every two instructions. Also note that the warrior structure is aligned
+such as the B-scanner will <EM>scan zero B-field in its own code</EM>. This
+is how it avoids winding up its own code. There is but one instruction: 
+the second one that will be read as non-zero when it reads its own code. 
+This instruction is the indicator for this warrior to begin its core-clear.<P>
+
+<H2><A NAME="cmpscan">CMP-scanners</A></H2>
+
+CMP-scanners detect the presence of opponent code by comparing (CMP) two 
+instructions at different locations. One of '88 rules is that at loading time, 
+all instructions other than those of two warriors are initialized with 
+<EM>DAT $0, $0</EM>. When CMP-scanner finds two non-identical instructions, 
+it knows that it is not comparing two DAT $0, $0. At least one of these 
+two instructions is either an opponent code or a modified code. In both 
+cases, CMP-scanner simply throws in self-splitting instructions at the
+concerned locations. The tricky part is to find out which one of the two 
+potentially belongs to the opponent. Like B-scanner, it should also avoid 
+any unintentional self-modification.<P>
+
+CMP-scanners might as well fall into two smaller divisions. Their difference
+is in the way they handle two non-identical instructions. Their choices are
+based on their scanning gap. The CMP-scanner with large/medium scanning gap 
+assumes the following: "if it is not the first instruction, then the second 
+one is part of opponent's". It then takes the next step (detailed below) to
+accomplish its duty. The other CMP-scanner (small scanning gap) assumes that 
+they have touched the intersection of the opponent's code. It then throws in 
+self-splitting instructions at all locations between the two locations 
+it is comparing.<P>
+
+Most CMP-scanners have the following components:
+<listing>	; ... CMP-scan
+	; ... handle everything to do upon two non-identical instructions.
+	; ... redo before finish
+	; ... core-clear</listing>
+
+<H3><A NAME="cmpscan2">CMP-scan</A></H3>
+
+The standard instructions for this component:
+<listing>	update ADD loc_mod, scan
+	scan   CMP loc, loc + gap
+	avoid  SLT #num, scan
+	rescan JMP update, 0</listing>
+
+The first instruction updates both A-field and B-field of scanning location.
+The second instruction does the scanning. The third instruction provides a
+mechanism to prevent damaging its own codes. The last instruction loops
+back to label update in the case of identical instructions. Most scanners 
+use the form <EM>DJN update, &lt;b-attack</EM> as their looping 
+instruction.<P>
+
+<H3><A NAME="cmpstun2">Handle the next part after CMP-scan</A></H3>
+
+One basic problem with CMP-scanners is that '88 doesn't have any A-field
+indirect references. Since CMP-scanners use both A-field and B-field as
+their scanning location, they should as well be able to inspect both pointed
+locations and to take the neccessary actions based on both fields. Not until
+then, their progress is incomplete.<P>
+
+<DL>
+Some solutions to the above problem are:
+<DT>Bomb in-between the two locations.
+<DD><listing>	    MOV #gap, cnt  ; the constant gap is known
+	    MOV spl_i, &lt;scan
+	cnt DJN -1, #cnt
+	    ADD #gap, scan ; re-adjust the B-field scan ptr</listing>
+<DT>Bomb exactly at the two locations. (I)
+<DD><listing>	MOV jmp_i, @scan   ; on B-field
+	MOV spl_i, &lt;scan
+	SUB #gap-1, scan   ; now B-field scan has the same value...
+	                   ; ... as A-field scan
+	MOV jmp_i, @scan   ; on A-field
+	MOV spl_i, &lt;scan
+	ADD #gap+1, scan   ;resume to B-field scan</listing>
+<DT>Bomb at first location and re-enter the scanning phase with B-field
+now refers to A-field.
+<DD><listing>	MOV jmp_i, @scan
+	MOV spl_i, &lt;scan
+	ADD loc_mod2, scan</listing>
+</DL>
+
+Due to the lengthy codes, the second method is rarely used. The first
+The first method is used by CMP-scanners based on 
+<A HREF="agony24.red">Agony</A> type warrior. 
+The second method is rarely used due to its lengthy codes.
+The last method is used by <A HREF="crimp2.red">Crimp</A> type 
+CMP-scanners.<P>
+
+The last method is intriguing to know. In normal scanning (instruction 1 - 4),
+both location pointers are updated as from E-F to C-D to A-B ... (below).
+<listing>	*	*	*	*	*	*
+	A	B	C	D	E	F
+</listing>
+When it detects different instructions, e.g between E and F, it changes
+its scanning pointers as from E-F to D-E. The purpose is to provide way
+to access the A-Field.<P>
+
+<H3><A NAME="cmploop2">Redo before finish</A></H3>
+
+Like <A HREF="#bloop2">B-scanner</A>, CMP-scanner intentionally bombs itself
+to indicate that it has finished its scanning phase. A single instruction
+does the trick:
+<listing>	JMN update, update</listing>
+
+<H3><A NAME="cmpend2">Core-clear</A></H3>
+
+A normal core-clear. The const value of <EM>MOV const, &lt;const</EM> can
+be used as loc_mod constant.
+
+<H3><A NAME="cmpall2">Overall</A></H3>
+
+Putting up together, here are the two versions of CMP-scanners:
+<listing>	; name CMP-scanner (small)          ; name CMP-scanner (large)
+	gap     EQU 12                      gap     EQU 49
+	const   EQU -28                     const   EQU -98
+	init    EQU update+const            init    EQU update+const2
+	                                    const2  EQU -49
+	update  ADD loc_mod, scan           update  ADD loc_mod, scan
+	scan    CMP init-gap, init          scan    CMP init-gap, init
+	        SLT #last-update, scan              SLT #last-update, scan
+	rescan  DJN update, &lt;6000           rescan  DJN update, &lt;6000
+	        MOV spl_i, &lt;scan                    MOV jmp_i, @scan
+	cnt     DJN -1, #cnt                        MOV spl_i, &lt;scan
+	        MOV #gap, cnt                       ADD mod_2, scan
+	        ADD #gap, scan              redo    JMN scan, scan
+	redo    JMN update, update          spl_i   SPL 0
+	spl_i   SPL 0                       mod_2   MOV const2, &lt;const2+1
+	loc_mod MOV const, &lt;const           jmp_i   JMP -1
+	last    END scan                    loc_mod DAT #const, #const
+	                                            END scan</listing>
+
+<H1><A NAME="comparison">Comparison between B-scanners and CMP-scanners</A></H1>
+
+<DL>
+<DT>Size
+<DD>B-scanner is much smaller than CMP-scanner. The average B-scanner #lines
+of codes is 8. The average CMP-scanner #lines of codes is 12.
+<DT>Scanning speed
+<DD>CMP-scanner is generally faster than B-scanner. CMP-scanner scans
+two locations for every three instructions (67%) while B-scanner scans
+one location for every two instructions (50%).
+<DT>Coverage
+<DD>A success B-scan can cover exactly half size of the core before entering
+core-clear. A success CMP-scan can cover from half size to almost full size of
+the core depending on the spread of its opponents.
+<DT>Additional offense and defense
+<DD>B-scanner: B-protection. CMP-scanner: DJN stream plus B-protection.
+<DT>Wasting on decoys
+<DD>B-scanner wastes less cycles than CMP-scanner does on decoys spreaded
+by their opponents. Most CMP-scanners however avoid most decoys caused by
+opponent's DJN-stream.
+<DT>Efficiency against stone
+<DD>B-scanner performs better than CMP-scanner does.
+<DT>Efficiency against paper
+<DD>CMP-scanner performs better than B-scanner does.
+</DL>
+
+<address>Author: wangsawm@kira.csos.orst.edu</address>
+
+</BODY>

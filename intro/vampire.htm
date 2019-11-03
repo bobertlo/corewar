@@ -1,0 +1,70 @@
+<HEAD>
+<TITLE>Intro to Art in '88: Vampire Warriors</TITLE>
+</HEAD>
+
+<BODY>
+<H1><A NAME="vampire">Vampire Style (Earlier)</A></H1>
+
+Vampire warriors, rather than throwing DAT bombs, they throw JMP pointers
+into the core. These pointers point to a placed trap. Once any enemy process 
+steps on one of those pointers, it is immediately transfered to the trap and 
+forced to do the slave works for vampire warriors.<P>
+
+Earlier incarnation of vampires worked like below:
+<listing>	;name Vampire 1
+
+	const EQU 2365
+
+	loc   MOV ptr, ptr     ; throw JMP pointer to core
+	      ADD #const, ptr  ; update pointer
+	      SUB #const, loc  ; update location
+	      JMP loc          ; loop back
+
+	ptr   JMP @0, trap     ; the pointer weapon
+
+	trap  SPL 1, -100      ; this is where the pointer points to
+	      MOV bomb, &lt;-1    ; core-clear
+	      JMP trap
+	bomb  DAT #0</listing>
+
+This warrior throws pointers one for every 5 instructions (modulo 5).
+The constant has been chosen to <A HREF="misc.htm#pattern">work well</A> with
+<A HREF="misc.htm#modulo">modulo 5</A>. Note that the next pointer and the
+next location are updated by the same constant but reversed in sign.<P>
+
+The trap here simply forces all processes in it to accumulate more processes
+and to execute <A HREF="misc.htm#coreClear">core-clear</A>. The standard
+<A HREF="misc.htm#selfSplit">self-splitting</A> is not used here so that
+the slavers can execute self-destruct once they finish core-clear.<P>
+
+<H1><A NAME="vampire">Vampire Style (Modern)</A></H1>
+
+Modern vampires use more effective procedure:
+<listing>	;name Vampire 2
+
+	const EQU 2365
+
+	      SPL 0            ; self splitting
+	vamp  MOV ptr, @ptr    ; throw pointer
+	      ADD data, ptr    ; update pointer
+              DJN vamp, &lt;2339  ; loop back + non-lethal attack
+
+	ptr   JMP trap, ptr    ; pointer to...
+
+	trap  SPL 1, -100      ; ...here
+	      MOV data, &lt;-1
+	      JMP -2
+	data  DAT #const, #-const</listing>
+
+The only changes here are the main component (vampire) and the pointer
+structure. Pointer is now updated at once. With this change, it permits
+<A HREF="misc.htm#selfSplit">self-splitting</A> mechanism for harder
+shell (protection). Another improvement is that the vampire throws pointers 
+faster than before. The gained speed is approximately 30%.<P>
+
+Samples of vampire warriors are: 
+<A HREF="sucker5.red">Sucker</A>, 
+<A HREF="pittrap.red">PitTrap</A>,
+<A HREF="twilight.red">Twilight Pits</A>, and many others.<P>
+
+</BODY>

@@ -1,0 +1,129 @@
+<HEAD>
+<TITLE>Intro to Art in '88: Paper Warriors</TITLE>
+
+<H1>PREFACE</H1>
+
+The following part of introduction describes about some paper warriors.
+It covers about: basic paper style, improving paper, winning with paper,
+and checksum design.<P>
+
+<UL>Table lookup
+<LI><A HREF="#start">Basic paper style</A>
+<LI><A HREF="#checksum">Checksum design</A>
+</UL>
+
+</HEAD>
+
+<BODY>
+<H1><A NAME="start">Basic paper style</A></H1>
+
+A paper warrior is basically a replicator. Its ability to spread in the core
+and to disrupt opponent code is its main strength. By replicating and spreading,
+it assures itself a long endurance. The negative effect is it exposes and
+renders itself vulnerable to warriors that apply
+<A HREF="misc.htm#selfSplit">stun attack</A>. Hence paper is a formidable
+opponent against a single process stone and at the same time is an easy
+target against scissors-type warriors.<P>
+
+A basic paper program might look like this:
+<listing>       ;name Paper 1
+
+         cnt EQU lst-src     ; number of code in paper
+
+         src DAT #cnt        ; source pointer
+         dst DAT #1222       ; destination pointer
+         pap MOV #cnt, src   ; #cnt is number of lines to be copied
+             MOV &lt;src, &lt;dst  ; copy a code...
+             JMN -1, src     ; once at a time and
+                             ; loop back until all lines copied
+             SPL @dst        ; split the process to a new copy
+             SUB #23, dst    ; give more distance to the next copy
+             JMP pap         ; make other copies
+         lst END pap</listing>
+
+As early as the development of '88 had gone, this kind of program was also
+known as mice program. They could fill-up the core faster than what early
+<A HREF="index.htm#Stone">stones</A> or dwarfs could cover.<P>
+
+Nowadays, there is little to be expected from it as far as efficiency is
+concerned. Notice that some of the codes have only one functional operand.
+By utilizing the unused operands, improvement on both speed and size can be
+gained.<P>
+
+<listing>       ;name Paper 2
+
+         cnt EQU lst-src     ; number of code in paper
+
+         src MOV #cnt, 0     ; source pointer
+             MOV &lt;src, &lt;dst  ; copy the code...
+             JMN -1, src     ; once at a time
+         dst SPL @0, 1222    ; destination pointer
+             SUB #23, dst    ; give more distance to next copy
+             JMZ src, src    ; redo
+         lst END src</listing>
+
+The second paper doesn't need DAT for its pointers. Its pointers are used in
+double usages with others. Instead of replicating 8 lines of code, it now
+replicates 6 lines. This means smaller module and faster progress.<P>
+
+<H1><A NAME="checksum">Checksum</A></H1>
+
+As paper modules replicate, their growth rate decreases proportionally.
+There is a side effect to this kind of event. Since paper warrior overides
+its adversary codes with its own replicating codes, there is a chance
+that its adversary becomes converted into another working paper instead of
+getting clobbered and terminated. For their best advantage, many paper
+warriors include in them checksum.<P>
+
+Like others, paper's goal is to terminate all of its adversary processes.
+Although it is lacking of what other warriors have:
+<A HREF="misc.htm#coreClear">core-clear</A>, it can win mainly just by
+overwriting the opponent code with its own paper code. An ideal paper module
+should provide dual functions: replicator and terminator. Checksum, as part
+of codes being copied, controls all the processes executing it to choose among
+the two functions. They are allowed to continue replicating if they can
+identify themselves as their own processes or forced terminated otherwise.<P>
+
+One way to design checksum is by observing how distinct own processes
+from opponent ones when running in a paper module. They are:
+<DL>
+ <DT>Initial location.
+ <DD>The opponent process may start at anywhere in the copied module.
+ <DT>Number.
+ <DD>There are more processes executing the module (own's + opponent's).
+</DL>
+
+A checksum can be implemented effectively with only few additional codes.
+The first warrior that demonstrates checksum is
+<A HREF="notepap.red">Note Paper</A>.<P>
+
+The concept is as follow:
+<listing>       ;name Paper 3
+
+         cnt  EQU dt - src
+
+         init SPL 1
+              MOV -1, 0
+              SPL 1          ; Create 6 on-line processes
+
+         src  MOV #cnt, 0    ; Init number of lines to be copied
+                             ; This also serves as a source pointer
+              MOV &lt;src, &lt;dst ; Copy a line 6 times (make one full copy)
+         dst  SPL @0, #1222  ; Split 6 times
+              MOV dt, &lt;-1    ; Give more distance to next copy
+              JMZ src, src   ; Test for checksum
+              MOV 0, -1      ; Attempt to erase that module
+         dt   END init</listing>
+
+The new warrior requires <A HREF="misc.htm#onlineProc">initial set-up</A>
+that create 6 processes that have to be executing on the same line.
+This paper module is equipped with checksum and self-erase routine.
+The self-erase routine is intended for all alien processes.<P>
+
+In order to make a full copy, there has to be at least 6 processes in any
+loop or module. The checksum checks for exactly 6 processes being present
+in that loop. If it is, the processes continue the copy routine.
+Otherwise, their progress are simply denied and forced to activate the
+self-erase routine.<P>
+
+</BODY>
